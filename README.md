@@ -2,9 +2,6 @@
 
 # Prometheus Monitoring Stack - Production Deployment Guide
 
-[![Prometheus](https://img.shields.io/badge/Prometheus-v2.44.0-orange)](https://prometheus.io/)
-[![Grafana](https://img.shields.io/badge/Grafana-Latest-blue)](https://grafana.com/)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-24.04_LTS-purple)](https://ubuntu.com/)
 
 Complete production-ready monitoring stack with **Prometheus**, **Grafana**, **Node Exporter**, **Blackbox Exporter**, and **Alertmanager** on Ubuntu 24.04 LTS.
 
