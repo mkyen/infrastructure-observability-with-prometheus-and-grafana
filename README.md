@@ -28,6 +28,9 @@ Complete production-ready monitoring stack with **Prometheus**, **Grafana**, **N
 
 ## 🏗️ Architecture Overview
 
+![Arch](./assets/arch.JPG)
+
+
 ```
 
 
@@ -714,64 +717,81 @@ sudo systemctl restart prometheus
 
 ### Alertmanager Configuration
 
+
+
+### 1) Import the dashboard
+1. Grafana → **Dashboards** → **New** → **Import**
+2. In **Import via grafana.com**, enter `7587` → **Load**
+3. Select **Prometheus** as the datasource → **Import**
+
+### 2) Edit the “SSL Cert Expiry” panel
+1. Find **SSL Cert Expiry** panel
+2. Panel title menu → **Edit**
+3. In **Query (PromQL)** use:
+
+```promql
+(probe_ssl_earliest_cert_expiry{job="ssl_certificate_monitoring"} - time()) / 86400
+
+
+
 ```bash
-sudo tee /etc/alertmanager/alertmanager.yml > /dev/null <<'EOF'
-global:
-  resolve_timeout: 5m
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alertmanager@example.com'
-  smtp_auth_username: 'your-email@gmail.com'
-  smtp_auth_password: 'your-app-password'
-  smtp_require_tls: true
 
-route:
-  receiver: 'default'
-  group_by: ['alertname', 'cluster']
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 4h
-  
-  routes:
-    - match:
-        severity: critical
-      receiver: 'critical-alerts'
-      group_wait: 10s
-      repeat_interval: 1h
 
-    - match:
-        severity: warning
-      receiver: 'warning-alerts'
+sudo tee /etc/prometheus/alert_rules.yml >/dev/null <<'EOF'
+groups:
+- name: ssl-expiry
+  rules:
+  # Kalan gün (float)
+  - record: ssl_cert_days_left
+    expr: (probe_ssl_earliest_cert_expiry - time()) / 86400
 
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'instance']
+  # 60 -> 30 days: one notification (info)
+  - alert: SSLCertExpiringIn60Days
+    expr: ssl_cert_days_left < 60 and ssl_cert_days_left >= 30
+    for: 10m
+    labels:
+      severity: info
+    annotations:
+      summary: "SSL expires within ~60 days"
+      description: "Instance {{ $labels.instance }} expires in {{ printf \"%.0f\" $value }} days"
 
-receivers:
-  - name: 'default'
-    email_configs:
-      - to: 'team@example.com'
-        send_resolved: true
+  # 30 to 15 days: one notification (warning)
+  - alert: SSLCertExpiringIn30Days
+    expr: ssl_cert_days_left < 30 and ssl_cert_days_left >= 15
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "SSL expires within ~30 days"
+      description: "Instance {{ $labels.instance }} expires in {{ printf \"%.0f\" $value }} days"
 
-  - name: 'critical-alerts'
-    email_configs:
-      - to: 'oncall@example.com'
-        send_resolved: true
-        headers:
-          Subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+  #  15 to 0 days: repeat daily (critical) 14, 13, etc. decreases.
 
-  - name: 'warning-alerts'
-    email_configs:
-      - to: 'team@example.com'
-        send_resolved: true
-        headers:
-          Subject: '[WARNING] {{ .GroupLabels.alertname }}'
+  - alert: SSLCertExpiringIn15Days
+    expr: ssl_cert_days_left < 15 and ssl_cert_days_left >= 0
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "SSL expires within 15 days"
+      description: "Instance {{ $labels.instance }} expires in {{ printf \"%.0f\" $value }} days"
+
+
 EOF
+kemal@vm-hub:/tmp$ sudo /usr/local/bin/promtool check rules /etc/prometheus/alert_rules.yml
+Checking /etc/prometheus/alert_rules.yml
+  SUCCESS: 4 rules found<img width="972" height="1156" alt="image" src="https://github.com/user-attachments/assets/af79e2bb-9dd1-4786-969f-e94f37bd97c2" />
 
-sudo chown prometheus:prometheus /etc/alertmanager/alertmanager.yml
 ```
+![Dashboard1](./assets/dashboard2.JPG)
+
+![Dashboard2](./assets/dashboard2.JPG)
+
+![CertExpired](./assets/certexpired.JPG)
+
+![CertAlert](./assets/certalert.JPG)
+
+
 
 **Start Alertmanager:**
 
