@@ -9,7 +9,8 @@ Complete production-ready monitoring stack with **Prometheus**, **Grafana**, **N
 
 ## 📋 Table of Contents
 
-- [Architecture Overview](#-architecture-overview) 
+
+- [Architecture Overview](#architecture-overview)
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
   - [1. Prometheus](#1-prometheus-installation)
@@ -26,7 +27,7 @@ Complete production-ready monitoring stack with **Prometheus**, **Grafana**, **N
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ![Arch](./assets/arch.JPG)
 
